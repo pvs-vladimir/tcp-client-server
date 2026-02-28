@@ -3,35 +3,37 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
-    #[arg(index = 1)]
+    #[arg(long, value_name = "COMMAND", required = true)]
     pub command: String,
 
-    #[arg(index = 2)]
-    pub arg: Option<String>,
+    #[arg(long, value_name = "NAME")]
+    pub name: Option<String>,
+
+    #[arg(long, value_name = "ID", value_parser = clap::value_parser!(u32))]
+    pub id: Option<u32>,
 }
 
-pub fn parse_args(cli: Cli) -> Result<(String, Option<String>), String> {
-    match cli.command.as_str() {
-        "add" => {
-            if let Some(ref name) = cli.arg {
-                if name.is_empty() {
-                    return Err("Название задачи не может быть пустым".to_string());
+impl Cli {
+    pub fn validate(&self) -> Result<(), String> {
+        match self.command.as_str() {
+            "add" => {
+                if self.name.is_none() {
+                    return Err("Для команды 'add' требуется аргумент --name".to_string());
                 }
-                Ok((cli.command, cli.arg))
-            } else {
-                Err("Для команды 'add' требуется название задачи".to_string())
-            }
-        }
-        "get" | "delete" => {
-            if let Some(ref id_str) = cli.arg {
-                if id_str.parse::<u32>().is_err() {
-                    return Err(format!("ID должен быть числом: {}", id_str));
+                if self.id.is_some() {
+                    return Err("Команда 'add' не принимает аргумент --id".to_string());
                 }
-                Ok((cli.command, cli.arg))
-            } else {
-                Err(format!("Для команды '{}' требуется ID задачи", cli.command))
             }
+            "get" | "delete" => {
+                if self.id.is_none() {
+                    return Err(format!("Для команды '{}' требуется аргумент --id", self.command));
+                }
+                if self.name.is_some() {
+                    return Err(format!("Команда '{}' не принимает аргумент --name", self.command));
+                }
+            }
+            _ => return Err(format!("Неизвестная команда: {}", self.command)),
         }
-        _ => Err(format!("Неизвестная команда: {}. Доступные: add, get, delete", cli.command)),
+        Ok(())
     }
 }
