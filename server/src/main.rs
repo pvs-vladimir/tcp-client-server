@@ -1,25 +1,26 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
-use common::Request;
-use crate::handlers::handle_request;
+use common::{Config, MAX_SEND_LENGTH, Request, Response};
 use crate::task_store::TaskStore;
+use crate::handlers::handle_request;
 
 mod task_store;
 mod handlers;
 
 fn handle_client(mut stream: TcpStream, store: &mut TaskStore) -> std::io::Result<()> {
-    let mut buffer = Vec::new();
-    stream.read_to_end(&mut buffer)?;
+    let mut buffer = [0; MAX_SEND_LENGTH];
+    let bytes_read = stream.read(&mut buffer)?;
 
     if buffer.is_empty() {
         return Ok(());
     }
-
-    let request: Request = serde_json::from_slice(&buffer).map_err(|e| {
+    
+    let request_slice = &buffer[..bytes_read];
+    let request: Request = serde_json::from_slice(&request_slice).map_err(|e| {
         std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())
     })?;
 
-    let response = handle_request(request, store);
+    let response: Response = handle_request(request, store);
     let response_json = serde_json::to_string(&response)?;
     stream.write_all(response_json.as_bytes())?;
     stream.flush()?;
@@ -28,10 +29,12 @@ fn handle_client(mut stream: TcpStream, store: &mut TaskStore) -> std::io::Resul
 }
 
 fn main() -> std::io::Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:8080")?;
-    println!("Сервер запущен на 127.0.0.1:8080");
+    let config = Config::default();
 
-    let mut store = TaskStore::new(5);
+    let listener = TcpListener::bind(&config.server_addr)?;
+    println!("Сервер запущен на {}", config.server_addr);
+
+    let mut store = TaskStore::new(config.max_num_tasks);
 
     loop {
         let (stream, addr) = listener.accept()?;

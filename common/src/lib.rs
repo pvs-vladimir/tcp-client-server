@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub server_addr: String,
+    pub max_send_length: usize,
+    pub max_num_tasks: usize,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Request {
     #[serde(rename = "type")]
@@ -14,6 +21,26 @@ pub struct Response {
     pub task_id: Option<u32>,
     pub task_name: Option<String>,
     pub message: Option<String>,
+}
+
+pub const DEFAULT_PORT: u16 = 8080;
+pub const MAX_SEND_LENGTH: usize = 256;
+pub const MAX_NUM_TASKS: usize = 5;
+
+impl Config {
+    pub fn default() -> Self {
+        Config {
+            server_addr: "127.0.0.1:8080".to_string(),
+            max_send_length: 256,
+            max_num_tasks: 5,
+        }
+    }
+
+    pub fn with_addr(addr: &str) -> Self {
+        let mut config = Self::default();
+        config.server_addr = addr.to_string();
+        config
+    }
 }
 
 impl Request {

@@ -1,11 +1,10 @@
 mod args;
-mod config;
 mod request;
 mod response;
 
 use clap::Parser;
 use args::{Cli, parse_args};
-use config::ClientConfig;
+use common::Config;
 use request::send_request;
 use response::handle_response;
 
@@ -22,7 +21,7 @@ fn main() -> std::io::Result<()> {
 
     let cli = Cli { command, arg };
 
-    let config = ClientConfig::default();
+    let config = Config::default();
 
     let response_bytes = send_request(&cli, &config)?;
 
